@@ -1,30 +1,53 @@
+import re
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from backend.rag.retriever import retrieve_context
 from backend.models.gemini_llm import generate_answer
 from backend.models.jee_neet_prompt import build_prompt
 from backend.utils.query_rewriter import rewrite_followup_question
-from backend.utils.database import ChatHistoryDB
+from backend.utils.database import ChatHistoryDB, UserAnalyticsDB
 from backend.utils.auth import get_current_user
 
 router = APIRouter()
 
-# How many stored messages to load for LLM context (token-efficient sliding window)
 HISTORY_WINDOW = 12
 
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _extract_topic(text: str) -> tuple[str, str]:
+    """Parse ### 📖 Concept line from LLM response → (topic, subject)."""
+    match = re.search(r"###.*?Concept[^\n]*\n+([^\n#]+)", text)
+    topic = match.group(1).strip()[:120] if match else "General"
+    subject = "General"
+    for s in ["Physics", "Chemistry", "Biology", "Mathematics", "Math"]:
+        if s.lower() in topic.lower():
+            subject = "Mathematics" if s == "Math" else s
+            break
+    return topic, subject
+
+
+# ── Models ─────────────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    messages: list[dict]  # client sends full in-memory history
+    messages: list[dict]
+    exam_mode: str = "JEE/NEET"      # "JEE Main" | "JEE Advanced" | "NEET"
+    marks: int = 4                    # 4 | 8
+    language: str = "english"        # "english" | "hinglish"
 
 
-# ──────────────────────────────────────────────
-# POST /api/chat  — main chat endpoint
-# ──────────────────────────────────────────────
+class FeedbackRequest(BaseModel):
+    topic: str
+    subject: str = "General"
+    is_correct: bool
+
+
+# ── POST /api/chat ─────────────────────────────────────────────────────────────
+
 @router.post("/chat")
 async def chat(
     req: ChatRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     history = req.messages
     user_id = current_user.get("user_id", current_user.get("sub", ""))
@@ -33,35 +56,33 @@ async def chat(
         raise HTTPException(status_code=400, detail="Empty user message.")
 
     latest_user_text = history[-1]["text"].strip()
-    print(f"\n📩 [{user_id}] {latest_user_text[:80]}")
+    print(f"\n📩 [{user_id}] [{req.exam_mode} {req.marks}M] {latest_user_text[:80]}")
 
-    # ── Step 1: Save user message to DB ──────────────────────────────────────
+    # Save user message
     ChatHistoryDB.save_message(user_id, "user", latest_user_text)
 
-    # ── Step 2: Load server-side history for LLM context ─────────────────────
-    # Use server DB (not client state) — reliable even after page refresh
+    # Load server history for LLM context
     db_history = ChatHistoryDB.get_history(user_id, limit=60)
-    # Sliding window: last HISTORY_WINDOW messages for the LLM
-    lm_history = db_history[-(HISTORY_WINDOW + 1):-1]  # exclude the message we just saved
+    lm_history = db_history[-(HISTORY_WINDOW + 1):-1]
 
-    # ── Step 3: Rewrite follow-up into a good RAG search query ───────────────
-    # Pass the last 8 messages for context resolution
+    # Build RAG search query
     rewritten_query = rewrite_followup_question(db_history[-8:])
     print(f"🔍 RAG query: {rewritten_query[:80]}")
 
-    # ── Step 4: Retrieve NCERT context with the rewritten query ──────────────
+    # Retrieve NCERT context
     context = retrieve_context(rewritten_query, k=7)
-    preview = (context[:200] + "…") if len(context) > 200 else context
-    print(f"📖 Context: {preview}")
 
-    # ── Step 5: Build prompt with history + context ───────────────────────────
+    # Build calibrated prompt
     prompt = build_prompt(
         question=latest_user_text,
         context=context,
         history=lm_history,
+        exam_mode=req.exam_mode,
+        marks=req.marks,
+        language=req.language,
     )
 
-    # ── Step 6: Call LLM ──────────────────────────────────────────────────────
+    # Call LLM
     try:
         answer = generate_answer(prompt)
         if not answer or answer.startswith("[LLM Error]") or answer.startswith("[Gemini Error]"):
@@ -69,33 +90,41 @@ async def chat(
         print("✅ Answer generated")
     except Exception as e:
         print(f"❌ LLM error: {e}")
-        answer = f"Sorry, I couldn't generate an answer right now. Please try again. ({e})"
+        answer = f"Sorry, I couldn't generate an answer right now. Please try again."
 
-    # ── Step 7: Save assistant reply to DB ───────────────────────────────────
+    # Save assistant reply + track topic analytics
     ChatHistoryDB.save_message(user_id, "assistant", answer)
+    topic, subject = _extract_topic(answer)
+    UserAnalyticsDB.record_question(user_id, topic, subject)
 
-    return {"answer": answer}
+    return {"answer": answer, "topic": topic, "subject": subject}
 
 
-# ──────────────────────────────────────────────
-# GET /api/chat/history  — load history on login
-# ──────────────────────────────────────────────
-@router.get("/chat/history")
-async def get_history(
-    current_user: Dict[str, Any] = Depends(get_current_user)
+# ── POST /api/chat/feedback ────────────────────────────────────────────────────
+
+@router.post("/chat/feedback")
+async def feedback(
+    req: FeedbackRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
 ):
+    user_id = current_user.get("user_id", current_user.get("sub", ""))
+    UserAnalyticsDB.record_feedback(user_id, req.topic, req.subject, req.is_correct)
+    return {"message": "Feedback recorded"}
+
+
+# ── GET /api/chat/history ──────────────────────────────────────────────────────
+
+@router.get("/chat/history")
+async def get_history(current_user: Dict[str, Any] = Depends(get_current_user)):
     user_id = current_user.get("user_id", current_user.get("sub", ""))
     messages = ChatHistoryDB.get_history(user_id, limit=100)
     return {"messages": messages}
 
 
-# ──────────────────────────────────────────────
-# DELETE /api/chat/history  — clear chat history
-# ──────────────────────────────────────────────
+# ── DELETE /api/chat/history ───────────────────────────────────────────────────
+
 @router.delete("/chat/history")
-async def clear_history(
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
+async def clear_history(current_user: Dict[str, Any] = Depends(get_current_user)):
     user_id = current_user.get("user_id", current_user.get("sub", ""))
     ChatHistoryDB.clear_history(user_id)
     return {"message": "Chat history cleared"}

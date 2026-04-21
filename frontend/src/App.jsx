@@ -1,24 +1,26 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Navbar from "./components/Navbar";
 import ChatBox from "./components/ChatBox";
+import DashboardPage from "./pages/DashboardPage";
+import FlashcardsPage from "./pages/FlashcardsPage";
+import ExamSetupPage from "./pages/ExamSetupPage";
+import ExamPage from "./pages/ExamPage";
+import ExamResultPage from "./pages/ExamResultPage";
+import ExamHistoryPage from "./pages/ExamHistoryPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
-import ProtectedRoute from "./components/ProtectedRoute";
 
-function ChatPage() {
+function AppLayout() {
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4">
-      <h1 className="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
-        JEE / NEET AI Assistant 🤖
-      </h1>
-
-      <ChatBox />
-
-      <footer className="mt-6 text-gray-500 text-xs">
-        Built with ❤️ by Bikram Barman
-      </footer>
+    <div className="min-h-screen bg-gray-950 text-white">
+      <Navbar />
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <Outlet />
+      </div>
     </div>
   );
 }
@@ -28,17 +30,30 @@ export default function App() {
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+          {/* Public routes */}
+          <Route path="/login"        element={<LoginPage />} />
+          <Route path="/signup"       element={<SignupPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+
+          {/* Protected routes — share Navbar layout */}
           <Route
-            path="/chat"
             element={
               <ProtectedRoute>
-                <ChatPage />
+                <AppLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route path="/chat"              element={<ChatBox />} />
+            <Route path="/dashboard"         element={<DashboardPage />} />
+            <Route path="/flashcards"        element={<FlashcardsPage />} />
+
+            {/* Exam routes — order matters: specifics before :sessionId */}
+            <Route path="/exam/setup"        element={<ExamSetupPage />} />
+            <Route path="/exam/history"      element={<ExamHistoryPage />} />
+            <Route path="/exam/:sessionId/result" element={<ExamResultPage />} />
+            <Route path="/exam/:sessionId"   element={<ExamPage />} />
+          </Route>
+
           <Route path="/" element={<Navigate to="/chat" replace />} />
         </Routes>
       </AuthProvider>

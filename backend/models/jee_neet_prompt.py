@@ -33,15 +33,38 @@ REQUIRED OUTPUT STRUCTURE:
 [One memory trick, shortcut, or pattern]
 """.strip()
 
+# ── Marks-based calibration instructions ──────────────────────────────────────
+MARKS_CALIBRATION = {
+    ("JEE Main", 4):     "JEE MAIN 4M: Give a focused solution in 3-4 steps. No lengthy derivations.",
+    ("JEE Advanced", 4): "JEE ADVANCED 4M: Show the key insight clearly. Include one non-obvious edge case.",
+    ("JEE Advanced", 8): "JEE ADVANCED 8M: Full step-by-step derivation. Cover all cases. Show alternate method if exists.",
+    ("NEET", 4):         "NEET 4M: Emphasise conceptual understanding. Include diagram description. 2-3 clean steps.",
+}
+
+LANGUAGE_INSTRUCTIONS = {
+    "hinglish": (
+        "LANGUAGE: Respond in Hinglish — the natural mix of Hindi and English that Indian students use. "
+        "Example: 'Yaar, basically yeh formula apply karo — \\( F = ma \\) — aur fir value substitute karo.' "
+        "Keep technical terms and formulas in English/LaTeX. Be friendly and casual like a senior student helping a junior."
+    ),
+    "english": "",
+}
+
 
 def build_prompt(
     question: str,
     context: str,
     history: list[dict] | None = None,
-    subject: str = "",
-    exam: str = "JEE/NEET",
+    exam_mode: str = "JEE/NEET",
+    marks: int = 4,
+    language: str = "english",
 ) -> str:
-    # Build conversation history block (last 12 messages max = 6 exchanges)
+
+    # ── Calibration block ──────────────────────────────────────────────────────
+    calibration = MARKS_CALIBRATION.get((exam_mode, marks), f"EXAM: {exam_mode} {marks}M")
+    language_note = LANGUAGE_INSTRUCTIONS.get(language, "")
+
+    # ── Conversation history block ─────────────────────────────────────────────
     history_block = ""
     if history:
         lines = []
@@ -49,7 +72,6 @@ def build_prompt(
             role = msg.get("role", "user").upper()
             text = msg.get("text", "").strip()
             if text:
-                # Truncate only extremely long assistant answers to save tokens
                 if role == "ASSISTANT" and len(text) > 2000:
                     text = text[:2000] + "… [truncated]"
                 lines.append(f"{role}: {text}")
@@ -62,8 +84,8 @@ def build_prompt(
 
     return f"""{SYSTEM_PROMPT}
 
-EXAM: {exam}
-SUBJECT: {subject or 'Auto-detect from question'}
+{calibration}
+{language_note}
 {history_block}
 --- NCERT CONTEXT ---
 {context or 'No relevant context retrieved. Solve using standard NCERT first principles.'}
@@ -71,4 +93,4 @@ SUBJECT: {subject or 'Auto-detect from question'}
 
 STUDENT QUESTION: {question}
 
-Answer (Markdown + LaTeX only, under 350 words):"""
+Answer (Markdown + LaTeX only):"""

@@ -69,13 +69,14 @@ async def signup(user_data: UserSignup):
     verification_link = f"{FRONTEND_URL}/verify-email?token={verification_token}&email={user_data.email}"
     
     if not email_sent:
-        # User created but email failed - still return success but warn user
+        # SMTP not configured — auto-verify so the user can log in immediately.
+        await UserDB.verify_email(user_data.email)
         return {
-            "message": "Account created successfully, but verification email could not be sent.",
+            "message": "Account created and auto-verified (email delivery unavailable). You can log in now.",
             "email": user_data.email,
-            "status": "pending_verification",
+            "status": "verified",
             "email_sent": False,
-            "verification_link": verification_link
+            "verification_link": verification_link,
         }
     
     return {

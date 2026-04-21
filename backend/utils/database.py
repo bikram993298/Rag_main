@@ -1,8 +1,8 @@
 import os
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.errors import DuplicateKeyError
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from bson.objectid import ObjectId
 from dotenv import load_dotenv
 from pathlib import Path
@@ -31,6 +31,11 @@ def init_db():
     try:
         db["users"].create_index("email", unique=True)
         db["chat_history"].create_index([("user_id", 1), ("created_at", 1)])
+        db["user_analytics"].create_index([("user_id", 1), ("topic", 1)], unique=True)
+        db["user_analytics"].create_index([("user_id", 1), ("last_seen", DESCENDING)])
+        db["flashcards"].create_index([("user_id", 1), ("due_date", ASCENDING)])
+        db["user_activity"].create_index([("user_id", 1), ("date", DESCENDING)], unique=True)
+        db["exam_sessions"].create_index([("user_id", 1), ("submitted_at", DESCENDING)])
         print("Database initialized with indexes")
     except Exception as exc:
         print(f"Database initialization skipped: {exc}")
@@ -175,4 +180,156 @@ class ChatHistoryDB:
             return True
         except Exception:
             return False
+
+
+class UserAnalyticsDB:
+    """Track per-topic question accuracy per user."""
+
+    COLL = "user_analytics"
+    ACT = "user_activity"
+
+    @staticmethod
+    def record_question(user_id: str, topic: str, subject: str) -> None:
+        try:
+            db[UserAnalyticsDB.COLL].update_one(
+                {"user_id": user_id, "topic": topic},
+                {"$inc": {"asked": 1}, "$set": {"subject": subject, "last_seen": datetime.utcnow()}},
+                upsert=True,
+            )
+            today = date.today().isoformat()
+            db[UserAnalyticsDB.ACT].update_one(
+                {"user_id": user_id, "date": today},
+                {"$inc": {"count": 1}},
+                upsert=True,
+            )
+        except Exception:
+            pass
+
+    @staticmethod
+    def record_feedback(user_id: str, topic: str, subject: str, is_correct: bool) -> None:
+        try:
+            field = "correct" if is_correct else "incorrect"
+            db[UserAnalyticsDB.COLL].update_one(
+                {"user_id": user_id, "topic": topic},
+                {"$inc": {field: 1}, "$set": {"subject": subject, "last_seen": datetime.utcnow()}},
+                upsert=True,
+            )
+        except Exception:
+            pass
+
+    @staticmethod
+    def get_analytics(user_id: str) -> list:
+        try:
+            return list(
+                db[UserAnalyticsDB.COLL]
+                .find({"user_id": user_id}, {"_id": 0})
+                .sort("asked", DESCENDING)
+            )
+        except Exception:
+            return []
+
+    @staticmethod
+    def get_streak(user_id: str) -> int:
+        """Count consecutive days with activity ending today or yesterday."""
+        try:
+            days = sorted(
+                [
+                    d["date"]
+                    for d in db[UserAnalyticsDB.ACT].find(
+                        {"user_id": user_id}, {"date": 1, "_id": 0}
+                    )
+                ],
+                reverse=True,
+            )
+            if not days:
+                return 0
+            streak = 0
+            check = date.today()
+            for d in days:
+                if d == check.isoformat() or d == (check - timedelta(1)).isoformat():
+                    streak += 1
+                    check = date.fromisoformat(d) - timedelta(1)
+                else:
+                    break
+            return streak
+        except Exception:
+            return 0
+
+
+class FlashcardDB:
+    """Spaced-repetition flashcards per user."""
+
+    COLL = "flashcards"
+
+    @staticmethod
+    def create(user_id: str, front: str, back: str, topic: str, subject: str) -> str:
+        try:
+            doc = {
+                "user_id": user_id,
+                "front": front,
+                "back": back,
+                "topic": topic,
+                "subject": subject,
+                "due_date": datetime.utcnow(),
+                "interval": 1,
+                "ease": 2.5,
+                "reviews": 0,
+                "created_at": datetime.utcnow(),
+            }
+            result = db[FlashcardDB.COLL].insert_one(doc)
+            return str(result.inserted_id)
+        except Exception:
+            return ""
+
+    @staticmethod
+    def get_all(user_id: str) -> list:
+        try:
+            docs = list(
+                db[FlashcardDB.COLL]
+                .find({"user_id": user_id})
+                .sort("due_date", ASCENDING)
+            )
+            for d in docs:
+                d["id"] = str(d.pop("_id"))
+            return docs
+        except Exception:
+            return []
+
+    @staticmethod
+    def get_due(user_id: str) -> list:
+        try:
+            now = datetime.utcnow()
+            docs = list(
+                db[FlashcardDB.COLL]
+                .find({"user_id": user_id, "due_date": {"$lte": now}})
+                .sort("due_date", ASCENDING)
+            )
+            for d in docs:
+                d["id"] = str(d.pop("_id"))
+            return docs
+        except Exception:
+            return []
+
+    @staticmethod
+    def review(card_id: str, quality: int) -> None:
+        """quality: 0=forgot → +1d, 1=hard → +3d, 2=easy → +7d"""
+        intervals = {0: 1, 1: 3, 2: 7}
+        days = intervals.get(quality, 1)
+        try:
+            db[FlashcardDB.COLL].update_one(
+                {"_id": ObjectId(card_id)},
+                {
+                    "$set": {"due_date": datetime.utcnow() + timedelta(days=days)},
+                    "$inc": {"reviews": 1},
+                },
+            )
+        except Exception:
+            pass
+
+    @staticmethod
+    def delete(card_id: str) -> None:
+        try:
+            db[FlashcardDB.COLL].delete_one({"_id": ObjectId(card_id)})
+        except Exception:
+            pass
 

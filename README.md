@@ -1,22 +1,24 @@
-# JEE/NEET AI Tutor — RAG + Groq + Gemini
+# JEE/NEET AI Platform — Full-Stack Study Assistant
 
-> An AI-powered tutoring platform built with **Retrieval-Augmented Generation (RAG)**, **Groq Llama 3.3 70B**, and **Google Gemini** to help students prepare for JEE and NEET with NCERT-grounded, exam-pattern answers.
+> A complete AI-powered study platform for JEE & NEET students — RAG-based chat tutor, online exam engine with AI evaluation, spaced-repetition flashcards, performance analytics, and more. **100% free infrastructure.**
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
+- [Feature List](#feature-list)
 - [Tech Stack](#tech-stack)
 - [System Architecture](#system-architecture)
-- [Class Diagram](#class-diagram)
 - [Database Schema](#database-schema)
+- [Class Diagram](#class-diagram)
 - [Auth Flow](#auth-flow)
 - [Chat Request Flow](#chat-request-flow)
 - [RAG Pipeline](#rag-pipeline)
+- [Exam Platform Flow](#exam-platform-flow)
 - [Frontend Component Tree](#frontend-component-tree)
 - [Local Setup](#local-setup)
+- [Quick Start](#quick-start)
 - [Folder Structure](#folder-structure)
 - [API Reference](#api-reference)
 - [Free Tier Limits](#free-tier-limits)
@@ -26,27 +28,79 @@
 
 ## Overview
 
-**JEE-NEET-RAG** is a full-stack educational AI platform. Students ask theory or numerical questions, and the AI answers with structured, step-by-step explanations grounded in NCERT content — not hallucinated answers.
+**JEE-NEET-RAG** is a full-stack educational AI platform. Students get NCERT-grounded answers via two-stage RAG, take AI-generated online exams, review weak topics on a dashboard, and build flashcard decks with one click — all for free.
 
-**What makes it better than generic ChatGPT:**
-- Answers sourced from your actual NCERT data via two-stage RAG (FAISS + Cross-Encoder reranker)
-- Expert structured format per answer: Concept → Solution → Common Mistake → Exam Tip
-- Per-user persistent chat history in MongoDB — context survives page refresh and re-login
-- Groq Llama 3.3 70B as primary LLM with Gemini 2.0 Flash as automatic fallback
+**Why it beats generic ChatGPT for JEE/NEET:**
+
+| Feature | Generic ChatGPT | This Platform |
+|---|---|---|
+| Grounded in NCERT | ✗ Hallucinated | ✅ FAISS + Cross-Encoder RAG |
+| Exam-specific format | ✗ Generic | ✅ JEE Main / Advanced / NEET calibration |
+| Marks-based depth | ✗ | ✅ 4M vs 8M answer length |
+| Language | English only | ✅ English + Hinglish toggle |
+| AI online exam | ✗ | ✅ Timed MCQ with auto-evaluation |
+| Spaced repetition | ✗ | ✅ Flashcard deck with SM-2 intervals |
+| Weak topic analysis | ✗ | ✅ Per-topic accuracy dashboard |
+| Per-user history | Session only | ✅ MongoDB, survives refresh & re-login |
 
 ---
 
-## Features
+## Feature List
 
-- JWT authentication with email verification (signup → verify → login)
-- Per-user chat history stored in MongoDB — loads on every login, persists across devices
-- Two-stage RAG: FAISS retrieves top 20 candidates, Cross-Encoder reranks to best 5
-- Groq Llama 3.3 70B primary (14,400 req/day free) + Gemini 2.0 Flash fallback with key rotation
-- Structured JEE/NEET expert prompt with LaTeX math rendering via KaTeX
-- Smart sentence-boundary chunking keeps formulas and explanations intact
-- NCERT PDF extraction utility — convert PDFs to `.txt` for ingestion
-- Token-efficient sliding window — last 12 messages sent to LLM, no runaway costs
+### 🤖 AI Chat Tutor
+- Ask any JEE / NEET question — Physics, Chemistry, Maths, Biology
+- Two-stage RAG: FAISS retrieves top-20 NCERT chunks → Cross-Encoder reranks to best 5
+- Groq Llama 3.3 70B (primary) with Google Gemini 2.0 Flash fallback + 3-key rotation
+- Expert structured response: **Concept → Solution → Common Mistake → Exam Tip**
+- LaTeX math rendering via KaTeX, Markdown tables, code blocks
+- Persistent per-user history in MongoDB (last 60 messages stored, last 12 sent to LLM)
+- Heuristic query rewriter — resolves "solve this" / "explain more" at zero LLM cost
 - Copy button on every response
+
+### 🎛️ Exam Mode Selector
+- **JEE Main**: +4 / −1 marking, 2-min-per-question calibration
+- **JEE Advanced**: +4 / −2 marking, 3-min-per-question calibration
+- **NEET**: +4 / −1 marking, 1.5-min-per-question calibration
+- **Marks slider**: 4M answers (focused, 3-4 steps) vs 8M answers (full derivation)
+- **Language toggle**: English / Hinglish (mixed Hindi + English for Hindi-medium students)
+
+### 📝 Online Exam Platform
+- 3-step exam wizard: choose mode → pick chapters → configure count & difficulty
+- **AI-generates MCQ questions** using Groq/Gemini from your selected chapters
+- Subject + Chapter accordion with Select All — 80+ chapters across Physics/Chemistry/Maths/Biology
+- Countdown timer (turns red under 5 minutes, auto-submits at zero)
+- Question navigation grid — color-coded: answered (green), flagged (yellow), unanswered (grey)
+- Flag questions for review, click answered option again to deselect
+- Submit confirmation modal with unattempted count warning
+- **AI evaluates answers** instantly on submit — marks calculated per exam mode rules
+- Per-question review: your answer vs correct answer, option highlights, full explanation
+- Filter results by All / Correct / Wrong / Unattempted
+- Exam history — all past attempts with score, time, date; click to re-view any result
+- Correct answers hidden from client until submission (stored server-side only)
+
+### 👍 Feedback & Analytics
+- Thumbs up / down on every AI response → stored per topic in MongoDB
+- Accuracy tracked per topic: `correct / (correct + incorrect)` ratings
+- Dashboard shows: total questions asked, overall accuracy %, current streak (days)
+- Subject-wise breakdown with colour-coded progress bars
+- **Weak Topics** list — topics with < 60% accuracy sorted worst-first
+- Recent questions timeline
+- Daily activity logged for streak calculation
+
+### 🔖 Flashcards with Spaced Repetition
+- Bookmark any AI answer → auto-extracts concept + exam tip into a flashcard
+- Manual card creation supported
+- Card flip UI: front (concept) → reveal back (explanation)
+- **Spaced repetition**: Forgot → +1 day, Hard → +3 days, Easy → +7 days
+- Due-count badge, toggle All / Due Only view
+- Per-card subject + topic tag, delete anytime
+
+### 🔐 Authentication
+- Email + password signup with JWT (HS256)
+- Email verification via SMTP (auto-verifies if SMTP not configured — development-friendly)
+- Access token: 30 min · Refresh token: 7 days (stored in localStorage)
+- Protected routes redirect to login; token refresh on expiry
+- Resend verification email from login page when account is unverified
 
 ---
 
@@ -54,15 +108,18 @@
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | React 18, TailwindCSS, ReactMarkdown, KaTeX, Lucide Icons |
+| **Frontend** | React 18, React Router v6, TailwindCSS, ReactMarkdown, KaTeX, Lucide Icons |
 | **Backend** | FastAPI, Uvicorn, Python 3.10+ |
-| **Primary LLM** | Groq Llama 3.3 70B (free, 14,400 req/day) |
-| **Fallback LLM** | Google Gemini 2.0 Flash (free, rotates up to 3 keys) |
-| **Vector DB** | FAISS (local, unlimited) |
+| **Primary LLM** | Groq Llama 3.3 70B (free — 14,400 req/day) |
+| **Fallback LLM** | Google Gemini 2.0 Flash (free — rotates up to 3 API keys) |
+| **Exam AI** | Same Groq/Gemini pipeline — generates + evaluates MCQ questions |
+| **Vector DB** | FAISS (local, unlimited, no API cost) |
 | **Reranker** | Cross-Encoder `ms-marco-MiniLM-L-6-v2` (local, free) |
 | **Embeddings** | `all-MiniLM-L6-v2` (local, free) |
-| **Database** | MongoDB Atlas (free tier — users + chat history) |
-| **Auth** | JWT HS256 (access 30 min + refresh 7 days) + SMTP email verification |
+| **Database** | MongoDB Atlas free tier (users, chat, analytics, flashcards, exams) |
+| **Auth** | JWT HS256 — access 30 min + refresh 7 days, bcrypt passwords |
+| **Email** | SMTP (Gmail App Password) for verification emails |
+| **Hosting** | Render.com (backend) + Netlify or Vercel (frontend) — both free |
 
 ---
 
@@ -70,227 +127,52 @@
 
 ```mermaid
 graph TB
-    subgraph Client["Browser / Client"]
-        UI[React 18 SPA]
+    subgraph Client["Browser / React SPA :5173"]
+        NAV[Navbar\nChat · Dashboard · Flashcards · Exam]
+        CHAT[ChatBox\nmode + marks + language selectors]
+        DASH[DashboardPage\nanalytics + weak topics]
+        FLASH[FlashcardsPage\nspaced repetition]
+        EXAM[ExamSetupPage → ExamPage → ResultPage]
         KC[KaTeX Math Renderer]
-        LS[localStorage - JWT tokens]
-        UI --> KC
-        UI --> LS
+        LS[localStorage — JWT tokens]
     end
 
-    subgraph Backend["FastAPI Backend  :8000"]
-        direction TB
+    subgraph Backend["FastAPI :8000"]
         MW[CORS Middleware]
-        AR[Auth Router\n/api/auth/*]
-        CR[Chat Router\n/api/chat]
-        JWTMid[JWT Middleware\nget_current_user]
-        QR[Query Rewriter\nheuristic, 0 LLM calls]
-        PM[Prompt Builder\njee_neet_prompt.py]
-        MW --> AR
-        MW --> CR
-        CR --> JWTMid
-        JWTMid --> QR
-        QR --> PM
+        AUTH[/api/auth/*\nJWT + bcrypt + SMTP]
+        CHATAPI[/api/chat\nRAG + LLM + history]
+        DASHAPI[/api/dashboard\nanalytics aggregation]
+        FCAPI[/api/flashcards\nSRS cards]
+        EXAMAPI[/api/exam/*\ngenerate + submit + results]
+        MW --> AUTH & CHATAPI & DASHAPI & FCAPI & EXAMAPI
     end
 
     subgraph RAG["RAG Pipeline"]
-        EMB[Sentence Transformer\nall-MiniLM-L6-v2]
-        FAISS[(FAISS Index\nlocal .idx file)]
-        CE[Cross-Encoder Reranker\nms-marco-MiniLM-L-6-v2]
-        EMB --> FAISS
-        FAISS -->|top 20 chunks| CE
-        CE -->|best 5 chunks| PM
+        EMB[all-MiniLM-L6-v2\nembeddings]
+        FAISS[(FAISS Index\nlocal)]
+        CE[Cross-Encoder\nms-marco-MiniLM-L-6-v2]
+        EMB --> FAISS --> CE
     end
 
     subgraph LLM["LLM Layer"]
-        GROQ[Groq\nLlama 3.3 70B\nprimary]
-        G1[Gemini 2.0 Flash\nKey 1]
-        G2[Gemini 2.0 Flash\nKey 2]
-        G3[Gemini 2.0 Flash\nKey 3]
-        GROQ -->|fails| G1
-        G1 -->|fails| G2
-        G2 -->|fails| G3
+        GROQ[Groq Llama 3.3 70B\nprimary]
+        GEM[Gemini 2.0 Flash\nKey 1 / 2 / 3 fallback]
+        GROQ -->|fail| GEM
     end
 
     subgraph DB["MongoDB Atlas"]
-        UC[(users\ncollection)]
-        HC[(chat_history\ncollection)]
+        USERS[(users)]
+        HISTORY[(chat_history)]
+        ANALYTICS[(user_analytics)]
+        ACTIVITY[(user_activity)]
+        CARDS[(flashcards)]
+        SESSIONS[(exam_sessions)]
     end
 
-    subgraph Email["SMTP"]
-        GMAIL[Gmail SMTP\nverification emails]
-    end
-
-    UI <-->|REST + JWT| MW
-    PM --> GROQ
-    CR <-->|save/load messages| HC
-    AR <-->|user CRUD| UC
-    AR --> GMAIL
-```
-
----
-
-## Class Diagram
-
-```mermaid
-classDiagram
-    direction TB
-
-    %% ── Pydantic Models ──────────────────────────────────────────
-    class UserBase {
-        +EmailStr email
-        +str full_name
-    }
-    class UserSignup {
-        +str password
-    }
-    class UserLogin {
-        +EmailStr email
-        +str password
-    }
-    class UserResponse {
-        +str id
-        +EmailStr email
-        +str full_name
-        +datetime created_at
-        +bool email_verified
-    }
-    class TokenResponse {
-        +str access_token
-        +str refresh_token
-        +str token_type
-        +UserResponse user
-    }
-    class EmailVerificationRequest {
-        +EmailStr email
-        +str token
-    }
-    class AuthProvider {
-        <<enumeration>>
-        LOCAL
-    }
-    UserBase <|-- UserSignup
-    UserBase <|-- UserResponse
-
-    %% ── Database Layer ───────────────────────────────────────────
-    class UserDB {
-        <<static>>
-        +create_user(email, full_name, password_hash, email_verified) Dict
-        +get_user_by_email(email) Dict
-        +get_user_by_id(user_id) Dict
-        +update_user(user_id, kwargs) Dict
-        +verify_email(email) Dict
-        +delete_user(user_id) bool
-        +user_exists(email) bool
-    }
-    class ChatHistoryDB {
-        <<static>>
-        +COLL = "chat_history"
-        +save_message(user_id, role, text) bool
-        +get_history(user_id, limit) list
-        +clear_history(user_id) bool
-    }
-
-    %% ── Auth Utilities ───────────────────────────────────────────
-    class AuthUtils {
-        <<module>>
-        +SECRET_KEY: str
-        +ALGORITHM = "HS256"
-        +ACCESS_TOKEN_EXPIRE_MINUTES = 30
-        +REFRESH_TOKEN_EXPIRE_DAYS = 7
-        +hash_password(password) str
-        +verify_password(plain, hashed) bool
-        +create_access_token(data) str
-        +create_refresh_token(data) str
-        +create_email_verification_token(email) str
-        +verify_email_verification_token(token) str
-        +get_current_user(credentials) Dict
-    }
-
-    %% ── LLM Layer ────────────────────────────────────────────────
-    class GeminiLLM {
-        <<module>>
-        +GROQ_API_KEY: str
-        +GROQ_MODEL: str
-        +GEMINI_KEYS: list
-        -_groq_client: Groq
-        -_gemini_key_cycle: cycle
-        -_ask_groq(prompt) str
-        -_ask_gemini(prompt, api_key) str
-        +ask_llm(prompt) str
-        +generate_answer(prompt, query, context) str
-    }
-    class JeeNeetPrompt {
-        <<module>>
-        +SYSTEM_PROMPT: str
-        +build_prompt(question, context, history, subject, exam) str
-    }
-
-    %% ── RAG Layer ────────────────────────────────────────────────
-    class Retriever {
-        <<module>>
-        -_model: SentenceTransformer
-        -_reranker: CrossEncoder
-        -_index: faiss.Index
-        -_id_map: dict
-        -_load_model() SentenceTransformer
-        -_load_reranker() CrossEncoder
-        -_load_index() faiss.Index
-        -_load_id_map() dict
-        +retrieve_context(query, k) str
-    }
-    class Ingest {
-        <<module>>
-        +CHUNK_SIZE = 450
-        +CHUNK_OVERLAP = 80
-        +smart_chunk(text, chunk_size, overlap) list
-        +infer_subject_and_chapter(file_path) tuple
-    }
-    class ExtractNcert {
-        <<module>>
-        +pdf_to_txt(pdf_path, output_path) int
-        +extract_directory(pdf_dir, output_dir) void
-    }
-    class QueryRewriter {
-        <<module>>
-        +VAGUE_TRIGGERS: set
-        -_is_vague(text) bool
-        +rewrite_followup_question(history) str
-    }
-
-    %% ── API Routes ───────────────────────────────────────────────
-    class AuthRouter {
-        <<FastAPI Router>>
-        +prefix = "/auth"
-        +signup(user_data) Dict
-        +verify_email(request) Dict
-        +login(credentials) TokenResponse
-        +refresh_token(current_user) TokenResponse
-        +get_current_user_profile(current_user) UserResponse
-        +logout(current_user) Dict
-        +resend_verification_email(email) Dict
-    }
-    class ChatRouter {
-        <<FastAPI Router>>
-        +HISTORY_WINDOW = 12
-        +chat(req, current_user) Dict
-        +get_history(current_user) Dict
-        +clear_history(current_user) Dict
-    }
-
-    %% ── Relationships ────────────────────────────────────────────
-    AuthRouter --> UserDB
-    AuthRouter --> AuthUtils
-    AuthRouter --> UserSignup
-    AuthRouter --> UserLogin
-    AuthRouter --> TokenResponse
-    ChatRouter --> ChatHistoryDB
-    ChatRouter --> Retriever
-    ChatRouter --> JeeNeetPrompt
-    ChatRouter --> QueryRewriter
-    ChatRouter --> GeminiLLM
-    JeeNeetPrompt ..> GeminiLLM : prompt passed to
-    Retriever --> Ingest : shares chunking logic
+    Client <-->|REST + Bearer JWT| Backend
+    CHATAPI --> RAG --> LLM
+    EXAMAPI --> LLM
+    Backend <--> DB
 ```
 
 ---
@@ -309,7 +191,6 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
-
     CHAT_HISTORY {
         ObjectId _id PK
         string user_id FK
@@ -317,13 +198,180 @@ erDiagram
         string text
         datetime created_at
     }
+    USER_ANALYTICS {
+        ObjectId _id PK
+        string user_id FK
+        string topic UK
+        string subject
+        int asked
+        int correct
+        int incorrect
+        datetime last_seen
+    }
+    USER_ACTIVITY {
+        ObjectId _id PK
+        string user_id FK
+        string date UK
+        int count
+    }
+    FLASHCARDS {
+        ObjectId _id PK
+        string user_id FK
+        string front
+        string back
+        string topic
+        string subject
+        datetime due_date
+        float ease
+        int interval
+        int reviews
+        datetime created_at
+    }
+    EXAM_SESSIONS {
+        ObjectId _id PK
+        string user_id FK
+        string exam_mode
+        array subjects
+        array chapters
+        string difficulty
+        array questions
+        object answers
+        int time_limit
+        int time_taken
+        string status
+        object score
+        array question_results
+        datetime created_at
+        datetime submitted_at
+    }
 
     USERS ||--o{ CHAT_HISTORY : "user_id"
+    USERS ||--o{ USER_ANALYTICS : "user_id"
+    USERS ||--o{ USER_ACTIVITY : "user_id"
+    USERS ||--o{ FLASHCARDS : "user_id"
+    USERS ||--o{ EXAM_SESSIONS : "user_id"
 ```
 
 **Indexes:**
-- `users.email` — unique index (enforces one account per email)
-- `chat_history.(user_id, created_at)` — compound index (fast history lookup sorted by time)
+- `users.email` — unique
+- `chat_history.(user_id, created_at)` — compound
+- `user_analytics.(user_id, topic)` — unique compound
+- `user_activity.(user_id, date)` — unique compound
+- `flashcards.(user_id, due_date)` — compound
+- `exam_sessions.(user_id, submitted_at)` — compound
+
+---
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    direction TB
+
+    class UserDB {
+        <<static>>
+        +create_user(email, full_name, password_hash) Dict
+        +get_user_by_email(email) Dict
+        +verify_email(email) Dict
+        +update_user(user_id, kwargs) Dict
+    }
+    class ChatHistoryDB {
+        <<static>>
+        +save_message(user_id, role, text) bool
+        +get_history(user_id, limit=60) list
+        +clear_history(user_id) bool
+    }
+    class UserAnalyticsDB {
+        <<static>>
+        +record_question(user_id, topic, subject)
+        +record_feedback(user_id, topic, subject, is_correct)
+        +get_analytics(user_id) list
+        +get_streak(user_id) int
+    }
+    class FlashcardDB {
+        <<static>>
+        +create(user_id, front, back, topic, subject) str
+        +get_all(user_id) list
+        +get_due(user_id) list
+        +review(card_id, quality 0|1|2)
+        +delete(card_id)
+    }
+
+    class GeminiLLM {
+        <<module>>
+        +GROQ_MODEL: str
+        +GEMINI_KEYS: list
+        +ask_llm(prompt) str
+        -_ask_groq(prompt) str
+        -_ask_gemini(prompt, key) str
+    }
+    class JeeNeetPrompt {
+        <<module>>
+        +SYSTEM_PROMPT: str
+        +MARKS_CALIBRATION: dict
+        +LANGUAGE_INSTRUCTIONS: dict
+        +build_prompt(question, context, history, exam_mode, marks, language) str
+    }
+    class ExamModels {
+        <<module>>
+        +CHAPTER_MAP: dict
+        +TIME_PER_QUESTION: dict
+        +MARKS_CONFIG: dict
+        +GenerateExamRequest
+        +SubmitExamRequest
+    }
+
+    class AuthRouter {
+        <<FastAPI Router /api/auth>>
+        +signup()
+        +verify_email()
+        +login() TokenResponse
+        +refresh_token()
+        +resend_verification_email()
+        +logout()
+    }
+    class ChatRouter {
+        <<FastAPI Router /api/chat>>
+        +chat(messages, exam_mode, marks, language)
+        +feedback(topic, subject, is_correct)
+        +get_history()
+        +clear_history()
+    }
+    class DashboardRouter {
+        <<FastAPI Router /api/dashboard>>
+        +get_dashboard() stats + weak_topics
+    }
+    class FlashcardsRouter {
+        <<FastAPI Router /api/flashcards>>
+        +list_cards(due_only)
+        +create_card(front, back, topic, subject)
+        +review_card(id, quality)
+        +delete_card(id)
+    }
+    class ExamRouter {
+        <<FastAPI Router /api/exam>>
+        +get_chapters()
+        +generate_exam(subjects, chapters, num_q, difficulty)
+        +get_session(session_id)
+        +submit_exam(session_id, answers, time_taken)
+        +get_result(session_id)
+        +get_history()
+        -_gen_prompt() str
+        -_fix_json_escapes(s) str
+        -_parse_questions(raw) list
+        -_calc_score(questions, answers) dict
+    }
+
+    ChatRouter --> ChatHistoryDB
+    ChatRouter --> UserAnalyticsDB
+    ChatRouter --> JeeNeetPrompt
+    ChatRouter --> GeminiLLM
+    DashboardRouter --> UserAnalyticsDB
+    FlashcardsRouter --> FlashcardDB
+    ExamRouter --> GeminiLLM
+    ExamRouter --> ExamModels
+    AuthRouter --> UserDB
+```
 
 ---
 
@@ -337,43 +385,33 @@ sequenceDiagram
     participant DB as MongoDB
     participant Mail as Gmail SMTP
 
-    Note over Student,Mail: ── Signup ──
+    Note over Student,Mail: Signup
     Student->>FE: Fill signup form
-    FE->>BE: POST /api/auth/signup {email, full_name, password}
-    BE->>DB: check users.email exists
-    DB-->>BE: not found
-    BE->>BE: bcrypt hash password
-    BE->>DB: insert user {email_verified: false}
-    BE->>BE: create JWT verification token (24h)
-    BE->>Mail: send HTML email with /verify-email?token=...
-    BE-->>FE: 201 {message: "Check your email"}
-    FE-->>Student: "Account created! Check your email."
+    FE->>BE: POST /api/auth/signup
+    BE->>DB: Insert user {email_verified: false}
+    BE->>Mail: Send verification email
+    alt SMTP configured
+        Mail-->>Student: Verification email
+        BE-->>FE: "Check your email"
+        FE-->>Student: Shows link + redirects in 4s
+    else SMTP not configured (dev)
+        BE->>DB: Auto-verify user
+        BE-->>FE: "Auto-verified — you can log in"
+        FE-->>Student: Redirects to login
+    end
 
-    Note over Student,Mail: ── Email Verification ──
-    Student->>Mail: click verification link
-    Mail->>FE: GET /verify-email?token=xxx&email=yyy
-    FE->>BE: POST /api/auth/verify-email {token, email}
-    BE->>BE: decode JWT token, validate email match
-    BE->>DB: update email_verified = true
-    BE-->>FE: 200 {message: "Email verified!"}
-    FE-->>Student: redirect to /login
-
-    Note over Student,Mail: ── Login ──
+    Note over Student,Mail: Login
     Student->>FE: Enter email + password
-    FE->>BE: POST /api/auth/login {email, password}
-    BE->>DB: find user by email
-    DB-->>BE: user doc
-    BE->>BE: check email_verified == true
+    FE->>BE: POST /api/auth/login
+    BE->>DB: Find user, check email_verified
     BE->>BE: bcrypt verify password
-    BE->>BE: create access_token (30 min) + refresh_token (7 days)
-    BE-->>FE: 200 {access_token, refresh_token, user}
-    FE->>FE: store tokens in localStorage
-    FE-->>Student: redirect to /chat
+    BE-->>FE: {access_token (30m), refresh_token (7d)}
+    FE->>FE: Store in localStorage
+    FE-->>Student: Redirect to /chat
 
-    Note over Student,Mail: ── Token Refresh ──
+    Note over Student,Mail: Token Refresh
     FE->>BE: POST /api/auth/refresh  Bearer: refresh_token
-    BE->>BE: verify refresh_token signature
-    BE-->>FE: 200 {new access_token}
+    BE-->>FE: New access_token
 ```
 
 ---
@@ -384,46 +422,28 @@ sequenceDiagram
 sequenceDiagram
     actor Student
     participant FE as React Frontend
-    participant BE as FastAPI Backend
-    participant DB as MongoDB chat_history
+    participant BE as FastAPI
+    participant DB as MongoDB
     participant RAG as RAG Pipeline
-    participant LLM as LLM Layer
+    participant LLM as Groq / Gemini
 
-    Student->>FE: types question, hits Send
-    FE->>FE: append userMsg to local messages[]
-    FE->>BE: POST /api/chat  Bearer: access_token\n{messages: [...history]}
-
-    BE->>BE: verify JWT → extract user_id
-    BE->>DB: save_message(user_id, "user", text)
-
-    BE->>DB: get_history(user_id, limit=60)
-    DB-->>BE: last 60 messages
-
-    BE->>BE: QueryRewriter.rewrite_followup_question(last 8 msgs)\nheuristic only — zero LLM call
-
-    BE->>RAG: retrieve_context(rewritten_query, k=7)
-    RAG->>RAG: encode query → FAISS search top 20
-    RAG->>RAG: CrossEncoder.predict → rerank → top 5
-    RAG-->>BE: joined NCERT chunks (best 5)
-
-    BE->>BE: build_prompt(\n  question=latest_text,\n  context=ncert_chunks,\n  history=last 12 msgs\n)
-
+    Student->>FE: Types question, selects JEE Advanced 8M Hinglish
+    FE->>BE: POST /api/chat {messages, exam_mode, marks, language}
+    BE->>BE: Verify JWT
+    BE->>DB: save user message
+    BE->>DB: load last 60 messages
+    BE->>BE: QueryRewriter — detect "solve this/these"\n→ use last assistant msg as RAG query
+    BE->>RAG: retrieve_context(rewritten_query)
+    RAG->>RAG: encode → FAISS top-20 → CrossEncoder top-5
+    RAG-->>BE: best 5 NCERT chunks
+    BE->>BE: build_prompt(question, context, history,\nexam_mode="JEE Advanced", marks=8, language="hinglish")
     BE->>LLM: ask_llm(prompt)
-    alt Groq available
-        LLM->>LLM: Groq Llama 3.3 70B
-    else Groq quota/error
-        LLM->>LLM: Gemini 2.0 Flash Key 1
-    else Key 1 fails
-        LLM->>LLM: Gemini 2.0 Flash Key 2
-    end
-    LLM-->>BE: answer (Markdown + LaTeX)
-
-    BE->>DB: save_message(user_id, "assistant", answer)
-    BE-->>FE: 200 {answer}
-
-    FE->>FE: append botMsg to messages[]
+    LLM-->>BE: Markdown + LaTeX answer
+    BE->>DB: save assistant message
+    BE->>DB: record_question(topic, subject)
+    BE-->>FE: {answer, topic, subject}
     FE->>FE: ReactMarkdown + KaTeX render
-    FE-->>Student: formatted answer with math
+    FE-->>Student: Formatted answer with feedback buttons
 ```
 
 ---
@@ -432,24 +452,59 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[NCERT .txt files\ndata/ncert/**] --> B[smart_chunk\nsentence-boundary split\nchunk=450 chars, overlap=80]
-    B --> C[SentenceTransformer\nall-MiniLM-L6-v2\nencode chunks]
-    C --> D[(FAISS IndexFlatL2\nfaiss_index.idx)]
-    C --> E[(id_to_text.pkl\nindex → text + metadata)]
+    A[NCERT .txt files] --> B[smart_chunk\nsentence-boundary\nchunk=450 overlap=80]
+    B --> C[all-MiniLM-L6-v2\nencode chunks]
+    C --> D[(FAISS IndexFlatL2)]
+    C --> E[(id_to_text.pkl)]
 
-    F[Student Query] --> G[SentenceTransformer\nencode query]
-    G --> H{FAISS Search\ntop 20 candidates}
-    D --> H
-    H --> I[CrossEncoder\nms-marco-MiniLM-L-6-v2\nrerank 20 → 5]
-    E --> I
-    I --> J[Top 5 NCERT Chunks\njoined as context string]
-    J --> K[build_prompt\nSystem Prompt\n+ History\n+ Context\n+ Question]
+    F[Student Query] --> G[Heuristic Rewriter\n'solve this' → use last\nassistant msg]
+    G --> H[encode query]
+    H --> I{FAISS Search\ntop 20}
+    D --> I
+    I --> J[CrossEncoder\nms-marco-MiniLM-L-6-v2\nrerank → top 5]
+    E --> J
+    J --> K[build_prompt\nSystem + History + Context + Question\n+ exam_mode + marks + language]
     K --> L[LLM Answer]
+```
 
-    style D fill:#1e40af,color:#fff
-    style E fill:#1e40af,color:#fff
-    style I fill:#7c3aed,color:#fff
-    style K fill:#065f46,color:#fff
+---
+
+## Exam Platform Flow
+
+```mermaid
+sequenceDiagram
+    actor Student
+    participant FE as React Frontend
+    participant BE as FastAPI
+    participant LLM as Groq / Gemini
+    participant DB as MongoDB
+
+    Note over Student,DB: Setup
+    Student->>FE: Select JEE Main + Physics + Kinematics + 20Q + Medium
+    FE->>BE: POST /api/exam/generate
+    BE->>LLM: Generate 20 MCQ questions as JSON
+    LLM-->>BE: [{question, options[4], correct, explanation}...]
+    BE->>BE: _fix_json_escapes() — repair LaTeX backslashes
+    BE->>BE: _parse_questions() — validate structure
+    BE->>DB: Save session {questions with answers, status:"active"}
+    BE-->>FE: questions WITHOUT correct answers + session_id
+
+    Note over Student,DB: Taking Exam
+    FE->>FE: Countdown timer running
+    Student->>FE: Answer questions, flag some for review
+    FE->>FE: answers stored in React state only
+
+    Note over Student,DB: Submission
+    Student->>FE: Click Submit (or timer expires)
+    FE->>BE: POST /api/exam/session/{id}/submit {answers, time_taken}
+    BE->>BE: _calc_score() — apply +4/-1 marking
+    BE->>DB: Save {answers, score, question_results, status:"evaluated"}
+    BE-->>FE: {score, question_results with explanations}
+
+    Note over Student,DB: Results
+    FE->>FE: Show score%, correct/wrong/skipped
+    Student->>FE: Click any question to expand
+    FE-->>Student: Options highlighted + explanation shown
 ```
 
 ---
@@ -464,25 +519,36 @@ graph TD
     Router --> LoginPage
     Router --> SignupPage
     Router --> VerifyEmailPage
-    Router --> ProtectedRoute
 
-    ProtectedRoute --> ChatPage
-    ChatPage --> MathJaxContext
-    ChatPage --> ChatBox
+    Router --> ProtectedRoute
+    ProtectedRoute --> AppLayout
+    AppLayout --> Navbar
+
+    AppLayout --> ChatBox
+    AppLayout --> DashboardPage
+    AppLayout --> FlashcardsPage
+    AppLayout --> ExamSetupPage
+    AppLayout --> ExamPage
+    AppLayout --> ExamResultPage
+    AppLayout --> ExamHistoryPage
 
     ChatBox --> Message
     ChatBox --> Loader
-
     Message --> ReactMarkdown
-    ReactMarkdown --> remarkGfm
-    ReactMarkdown --> remarkMath
-    ReactMarkdown --> rehypeKatex
+    Message --> FeedbackButtons
+    Message --> SaveFlashcardButton
 
-    AuthProvider --> AuthContext["AuthContext\nstate: user, loading, error\nactions: signup login logout refresh"]
+    FlashcardsPage --> CardFlip
+
+    ExamPage --> Timer
+    ExamPage --> QuestionNav
+    ExamResultPage --> QuestionRow
+
+    AuthProvider --> AuthContext
 
     style AuthContext fill:#1e40af,color:#fff
     style ChatBox fill:#065f46,color:#fff
-    style Message fill:#065f46,color:#fff
+    style ExamPage fill:#7c3aed,color:#fff
 ```
 
 ---
@@ -508,45 +574,48 @@ pip install -r requirements.txt
 Create `backend/.env`:
 
 ```ini
-# RAG / Embeddings
+# ── LLM ──────────────────────────────────────────────────────────────────────
+# Get free key at console.groq.com
+GROQ_API_KEY=your_groq_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+
+# Get free key at aistudio.google.com
+GEMINI_API_KEY=your_gemini_key_here
+GEMINI_KEY_1=your_gemini_key_here
+# GEMINI_KEY_2=second_key_optional
+# GEMINI_KEY_3=third_key_optional
+GEMINI_MODEL=gemini-2.0-flash
+
+# ── RAG ──────────────────────────────────────────────────────────────────────
 FAISS_INDEX_PATH=data/embeddings/faiss_index.idx
 ID_MAP_PATH=data/embeddings/id_to_text.pkl
 EMBEDDING_MODEL=all-MiniLM-L6-v2
 
-# Primary LLM — get free key at console.groq.com
-GROQ_API_KEY=your_groq_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
-
-# Fallback LLM — get free key at aistudio.google.com
-GEMINI_API_KEY=your_gemini_key_here
-GEMINI_KEY_1=your_gemini_key_here
-# GEMINI_KEY_2=second_key   (optional extra quota)
-# GEMINI_KEY_3=third_key
-GEMINI_MODEL=gemini-2.0-flash
-
-# MongoDB Atlas — free tier at mongodb.com/atlas
+# ── Database — free at mongodb.com/atlas ─────────────────────────────────────
 MONGODB_URL=mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/
 DB_NAME=jee_neet_rag
 
-# JWT secret — python -c "import secrets; print(secrets.token_hex(32))"
+# ── Auth ─────────────────────────────────────────────────────────────────────
+# python -c "import secrets; print(secrets.token_hex(32))"
 SECRET_KEY=your_32_char_secret_here
 
-# SMTP email verification (Gmail recommended)
+# ── Email (optional — skip to use auto-verify in dev) ────────────────────────
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SENDER_EMAIL=your_email@gmail.com
-SENDER_PASSWORD=your_gmail_app_password
+SENDER_PASSWORD=your_gmail_app_password   # Gmail App Password, not login password
 
-# Frontend URL (for verification link in emails)
+# ── Server ───────────────────────────────────────────────────────────────────
 FRONTEND_URL=http://localhost:5173
-
 HOST=0.0.0.0
 PORT=8000
 ```
 
+> **SMTP optional**: If you skip SMTP vars, new accounts are auto-verified so you can log in immediately during development.
+
 ### 3. Prepare NCERT data
 
-Option A — you already have `.txt` files:
+**Option A** — place `.txt` files directly:
 
 ```
 data/ncert/physics/ch1_physical_world.txt
@@ -554,13 +623,13 @@ data/ncert/chemistry/ch1_some_basic_concepts.txt
 data/ncert/biology/ch1_living_world.txt
 ```
 
-Option B — extract from NCERT PDFs (requires `pymupdf`):
+**Option B** — extract from NCERT PDFs:
 
 ```bash
 # Single PDF
 python -m backend.rag.extract_ncert path/to/physics_ch1.pdf data/ncert/physics/ch1.txt
 
-# Entire folder
+# Entire folder of PDFs
 python -m backend.rag.extract_ncert path/to/ncert_pdfs/
 ```
 
@@ -570,23 +639,27 @@ python -m backend.rag.extract_ncert path/to/ncert_pdfs/
 python -m backend.rag.ingest
 ```
 
-### 5. Start backend
+### 5. Start everything
 
 ```bash
-python -m backend.api.main
+# Start both backend + frontend together
+./start.sh
 ```
 
-API docs: http://127.0.0.1:8000/docs
-
-### 6. Start frontend
+Or separately:
 
 ```bash
+# Terminal 1 — Backend
+source backend/.venv/bin/activate
+python -m backend.api.main
+# → http://localhost:8000  (API docs at /docs)
+
+# Terminal 2 — Frontend
 cd frontend
 npm install
 npm run dev
+# → http://localhost:5173
 ```
-
-Open: http://localhost:5173
 
 ---
 
@@ -594,46 +667,60 @@ Open: http://localhost:5173
 
 ```
 jee-neet-rag/
+├── start.sh                           One-command start for both servers
 ├── backend/
 │   ├── api/
-│   │   ├── main.py                    FastAPI app, CORS, startup
+│   │   ├── main.py                    FastAPI app, CORS, router registration
 │   │   └── routes/
 │   │       ├── auth.py                signup, login, verify, refresh, logout
-│   │       └── chat.py                POST /chat, GET+DELETE /chat/history
+│   │       ├── chat.py                POST /chat (RAG+LLM), feedback, history
+│   │       ├── dashboard.py           GET /dashboard — analytics aggregation
+│   │       ├── flashcards.py          CRUD + spaced-repetition review
+│   │       └── exam.py                generate, session, submit, result, history
 │   ├── models/
 │   │   ├── gemini_llm.py              Groq primary + Gemini key-rotation fallback
-│   │   ├── jee_neet_prompt.py         Expert system prompt + build_prompt()
-│   │   └── user.py                    Pydantic schemas (UserSignup, TokenResponse…)
+│   │   ├── jee_neet_prompt.py         Expert prompt + marks calibration + Hinglish
+│   │   ├── exam_models.py             CHAPTER_MAP, MARKS_CONFIG, Pydantic models
+│   │   └── user.py                    Pydantic auth schemas
 │   ├── rag/
 │   │   ├── ingest.py                  Chunk + embed + build FAISS index
 │   │   ├── retriever.py               FAISS + Cross-Encoder two-stage retrieval
 │   │   ├── extract_ncert.py           PDF → txt utility (pymupdf)
 │   │   └── merge_embeddings.py        Merge multiple FAISS indexes
 │   ├── utils/
-│   │   ├── auth.py                    JWT, bcrypt, Bearer token verification
-│   │   ├── database.py                UserDB + ChatHistoryDB (MongoDB)
-│   │   ├── email.py                   SMTP verification + password reset
-│   │   └── query_rewriter.py          Heuristic follow-up resolver (no LLM cost)
-│   ├── config.py                      Env var loading, path constants
+│   │   ├── auth.py                    JWT helpers, bcrypt, get_current_user dep
+│   │   ├── database.py                UserDB, ChatHistoryDB, UserAnalyticsDB,
+│   │   │                              FlashcardDB (all MongoDB helpers)
+│   │   ├── email.py                   SMTP verification email sender
+│   │   └── query_rewriter.py          Heuristic follow-up resolver (0 LLM cost)
+│   ├── config.py
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
-│       ├── App.jsx                    Router + AuthProvider
+│       ├── App.jsx                    Router + AuthProvider + AppLayout
 │       ├── components/
-│       │   ├── ChatBox.jsx            Chat UI, loads history on login, clear button
-│       │   ├── Message.jsx            ReactMarkdown + KaTeX + copy button
+│       │   ├── Navbar.jsx             Sticky nav: Chat·Dashboard·Flashcards·Exam
+│       │   ├── ChatBox.jsx            Mode/marks/language selectors, history load
+│       │   ├── Message.jsx            ReactMarkdown+KaTeX, feedback, save-flashcard
 │       │   ├── Loader.jsx             Typing indicator
-│       │   └── ProtectedRoute.jsx     Redirects to /login if unauthenticated
+│       │   └── ProtectedRoute.jsx     Redirect to /login if unauthenticated
 │       ├── context/
-│       │   └── AuthContext.jsx        JWT storage, signup/login/logout/refresh
+│       │   └── AuthContext.jsx        signup/login/logout/refresh + localStorage
 │       └── pages/
-│           ├── LoginPage.jsx
-│           ├── SignupPage.jsx
-│           └── VerifyEmailPage.jsx    Auto-verifies token from URL param
+│           ├── LoginPage.jsx          Login + email-not-verified helper + resend
+│           ├── SignupPage.jsx         Signup + verification link if SMTP fails
+│           ├── VerifyEmailPage.jsx    Auto-verify from URL token
+│           ├── DashboardPage.jsx      Stats, subject breakdown, weak topics
+│           ├── FlashcardsPage.jsx     Card flip + Forgot/Hard/Easy review
+│           ├── ExamSetupPage.jsx      3-step wizard (mode→chapters→configure)
+│           ├── ExamPage.jsx           Timer + Q&A + nav grid + submit modal
+│           ├── ExamResultPage.jsx     Score + per-question expandable review
+│           └── ExamHistoryPage.jsx    Past exam attempts list
 ├── data/
-│   ├── ncert/                         Your .txt NCERT files go here
+│   ├── ncert/                         Put your .txt NCERT files here
 │   └── embeddings/                    Auto-generated by ingest.py
-├── .env.example
+├── render.yaml                        Render.com deployment config
+├── .gitignore
 └── README.md
 ```
 
@@ -641,25 +728,73 @@ jee-neet-rag/
 
 ## API Reference
 
-### Auth endpoints
+### Auth  `/api/auth/`
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/signup` | — | Register, sends verification email |
-| POST | `/api/auth/verify-email` | — | Verify email with JWT token from link |
-| POST | `/api/auth/login` | — | Returns access + refresh tokens |
-| POST | `/api/auth/refresh` | Bearer refresh | New access token |
-| GET | `/api/auth/me` | Bearer access | Current user profile |
-| POST | `/api/auth/logout` | Bearer access | Logout (client discards tokens) |
-| POST | `/api/auth/resend-verification-email` | — | Resend verification email |
+| POST | `/signup` | — | Register new user, send verification email |
+| POST | `/verify-email` | — | Verify email with token from link |
+| POST | `/login` | — | Returns access + refresh tokens |
+| POST | `/refresh` | Bearer refresh | Get new access token |
+| GET | `/me` | Bearer access | Current user profile |
+| POST | `/logout` | Bearer access | Logout (client discards tokens) |
+| POST | `/resend-verification-email?email=` | — | Resend verification email |
 
-### Chat endpoints
+### Chat  `/api/chat`
+
+| Method | Endpoint | Auth | Body / Params | Description |
+|---|---|---|---|---|
+| POST | `/api/chat` | Bearer | `{messages, exam_mode, marks, language}` | Ask question, get RAG+LLM answer |
+| POST | `/api/chat/feedback` | Bearer | `{topic, subject, is_correct}` | Record thumbs up/down |
+| GET | `/api/chat/history` | Bearer | — | Load full chat history |
+| DELETE | `/api/chat/history` | Bearer | — | Clear all chat history |
+
+### Dashboard  `/api/dashboard`
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| POST | `/api/chat` | Bearer access | Send message, get AI answer |
-| GET | `/api/chat/history` | Bearer access | Load full chat history |
-| DELETE | `/api/chat/history` | Bearer access | Clear all chat history |
+| GET | `/api/dashboard` | Bearer | Stats: total asked, accuracy, streak, subject breakdown, weak topics, recent questions |
+
+### Flashcards  `/api/flashcards`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/flashcards?due_only=bool` | Bearer | List all cards (or only due today) |
+| POST | `/api/flashcards` | Bearer | Create card `{front, back, topic, subject}` |
+| PATCH | `/api/flashcards/{id}/review` | Bearer | Review `{quality: 0|1|2}` — updates due date |
+| DELETE | `/api/flashcards/{id}` | Bearer | Delete card |
+
+### Exam  `/api/exam/`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/exam/chapters` | Bearer | Chapter map by subject |
+| POST | `/api/exam/generate` | Bearer | `{exam_mode, subjects, chapters, num_questions, difficulty}` → session_id + questions |
+| GET | `/api/exam/session/{id}` | Bearer | Resume active exam (no answers exposed) |
+| POST | `/api/exam/session/{id}/submit` | Bearer | `{answers, time_taken}` → score + results |
+| GET | `/api/exam/session/{id}/result` | Bearer | Load saved result |
+| GET | `/api/exam/sessions` | Bearer | Exam history list |
+
+---
+
+## Marks Calibration
+
+| Exam Mode | Marks | Prompt Instruction |
+|---|---|---|
+| JEE Main | 4M | Focused solution in 3-4 steps, single concept |
+| JEE Advanced | 4M | Key insight clearly, concise proof |
+| JEE Advanced | 8M | Full step-by-step derivation, edge cases |
+| NEET | 4M | Conceptual understanding, NCERT-linked |
+
+---
+
+## Spaced Repetition Schedule
+
+| Button | Next Review |
+|---|---|
+| Forgot | +1 day |
+| Hard | +3 days |
+| Easy | +7 days |
 
 ---
 
@@ -667,32 +802,46 @@ jee-neet-rag/
 
 | Service | Free Limit | Role |
 |---|---|---|
-| Groq Llama 3.3 70B | 14,400 req/day | Primary LLM |
+| Groq Llama 3.3 70B | 14,400 req/day | Primary LLM (chat + exam) |
 | Gemini 2.0 Flash | 1,500 req/day per key | Fallback (×3 keys = 4,500/day) |
-| MongoDB Atlas | 512 MB | Users + chat history |
+| MongoDB Atlas | 512 MB | All 6 collections |
 | FAISS | Unlimited | Local vector search |
 | Cross-Encoder | Unlimited | Local reranking |
-| Render (backend) | 750 hrs/month | Hosting |
-| Vercel (frontend) | Unlimited | Hosting |
+| Sentence Transformer | Unlimited | Local embeddings |
+| Render.com (backend) | 750 hrs/month | Hosting (sleeps after 15 min idle) |
+| Vercel / Netlify (frontend) | Unlimited | Static hosting |
 
-**Total cost: ₹0**
+**Total cost: ₹0 / $0**
 
 ---
 
 ## Deployment
 
-### Backend — Render
+### Backend — Render.com
 
-1. Create a **Web Service** at render.com
-2. Connect your GitHub repo, set root to project root
-3. Add all variables from `backend/.env` as environment variables
-4. Start command: `python -m backend.api.main`
+1. Go to [render.com](https://render.com) → New → Web Service
+2. Connect GitHub repo, root directory = project root
+3. Set **Build Command**: `pip install -r backend/requirements.txt`
+4. Set **Start Command**: `python -m backend.api.main`
+5. Add all `backend/.env` vars as Environment Variables in Render dashboard
 
-### Frontend — Vercel
+### Frontend — Netlify (recommended)
 
-1. Import repo at vercel.com
-2. Set `VITE_API_URL=https://your-backend.onrender.com`
-3. Deploy
+1. Go to [netlify.com](https://netlify.com) → Add new site → Import from Git
+2. Set **Base directory**: `frontend`
+3. Set **Build command**: `npm run build`
+4. Set **Publish directory**: `frontend/dist`
+5. Add environment variable: `VITE_API_URL=https://your-app.onrender.com`
+6. Deploy
+
+### Frontend — Vercel (alternative)
+
+1. Go to [vercel.com](https://vercel.com) → New Project → Import Git repo
+2. Set **Root Directory**: `frontend`
+3. Add env var: `VITE_API_URL=https://your-app.onrender.com`
+4. Deploy
+
+> **Note**: Render free tier sleeps after 15 min of inactivity. First request after sleep takes ~30 seconds. Upgrade to Render Starter ($7/mo) to keep it always-on.
 
 ---
 
@@ -708,5 +857,5 @@ jee-neet-rag/
 
 ## License
 
-MIT License © 2025
+MIT License © 2025  
 Developed with ❤️ by [Bikram Barman](https://github.com/bikram993298)
