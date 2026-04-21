@@ -857,5 +857,5 @@ jee-neet-rag/
 
 ## License
 
-MIT License © 2025  
+MIT License © 2026
 Developed with ❤️ by [Bikram Barman](https://github.com/bikram993298)
