@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: jee-neet-rag-backend
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python -m backend.api.main
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: FAISS_INDEX_PATH
+        value: data/embeddings/faiss_index.idx
+      - key: ID_MAP_PATH
+        value: data/embeddings/id_to_text.pkl
+      - key: EMBEDDING_MODEL
+        value: all-MiniLM-L6-v2
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: DB_NAME
+        value: jee_neet_rag
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      # Set these as SECRET env vars in the Render dashboard:
+      # GROQ_API_KEY, GEMINI_API_KEY, GEMINI_KEY_1, MONGODB_URL,
+      # SECRET_KEY, SENDER_EMAIL, SENDER_PASSWORD, FRONTEND_URL

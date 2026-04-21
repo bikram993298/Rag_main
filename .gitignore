@@ -1,0 +1,48 @@
+# ── Python ────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environments ──────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Environment secrets ───────────────────
+backend/.env
+.env
+.env.local
+.env.*.local
+
+# ── NCERT source PDFs (large, not needed at runtime) ──
+data/ncert/*.pdf
+
+# ── Node / Frontend ───────────────────────
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+.npm
+
+# ── OS / Editor ───────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Logs ──────────────────────────────────
+*.log
+/tmp/
+
+# ── HuggingFace model cache (downloaded at runtime) ──
+.cache/
