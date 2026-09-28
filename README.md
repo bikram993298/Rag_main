@@ -1,4 +1,4 @@
-# JEE/NEET AI Platform — Full-Stack Study Assistant
+— Full-Stack Study Assistant
 
 > A complete AI-powered study platform for JEE & NEET students — RAG-based chat tutor, online exam engine with AI evaluation, spaced-repetition flashcards, performance analytics, and more. **100% free infrastructure.**
 
